@@ -3,31 +3,7 @@
 namespace CodePhix\Baas;
 
 use CodePhix\Baas\Connection;
-use CodePhix\Baas\Exceptions\ClienteException;
 use Exception;
-
-/**
- * Class Cliente
- * @package app\Baas
- *
- *
-    \"name\": \"".((!empty($data['name'])) ? $data['name'] : '')."\",
-    \"email\": \"".((!empty($data['email'])) ? $data['email'] : '')."\",
-    \"company\": \"".((!empty($data['company'])) ? $data['company'] : '')."\",
-    \"phone\": \"".((!empty($data['phone'])) ? $data['phone'] : '')."\",
-    \"mobilePhone\": \"".((!empty($data['mobilePhone'])) ? $data['mobilePhone'] : '')."\",
-    \"postalCode\": \"".((!empty($data['postalCode'])) ? $data['postalCode'] : '')."\",
-    \"address\": \"".((!empty($data['address'])) ? $data['address'] : '')."\",
-    \"addressNumber\": \"".((!empty($data['addressNumber'])) ? $data['addressNumber'] : '')."\",
-    \"complement\": \"".((!empty($data['complement'])) ? $data['complement'] : '')."\",
-    \"province\": \"".((!empty($data['province'] )) ? $data['province'] : '')."\",
-    \"city\": \"".((!empty($data['city'])) ? $data['city'] : '')."\",
-    \"state\": \"".((!empty($data['state'])) ? $data['state'] : '')."\",
-    \"cpfCnpj\": \"".((!empty($data['cpfCnpj'])) ? $data['cpfCnpj'] : '')."\",
-    \"additionalEmails\": \"".((!empty($data['additionalEmails'])) ? $data['additionalEmails'] : '')."\",
-    \"notificationDisabled\": ".((!empty($data['notificationDisabled']) && $data['notificationDisabled'] == 1) ? 'true' : 'false').",
-    \"externalReference\": \"".((!empty($data['externalReference'])) ? $data['externalReference'] : '')."\"
- */
 
 class Cliente
 {
@@ -36,7 +12,6 @@ class Cliente
     protected $cliente;
 
     public $cli;
-
     
     public function __construct(Connection $connection)
     {
@@ -68,121 +43,42 @@ class Cliente
                 $filtro = '?'.$filtro;
             }
         }
-        return $this->http->get('/customers'.$filtro);
+        return $this->http->get('/clients/users'.$filtro);
     }
 
     // Retorna os dados do cliente de acordo com o Id
     public function getById($id){
-        return $this->http->get('/customers/'.$id);
+
+        $header[] = "user: ".$id;
+
+        $return = $this->http->get('/users','',$header);
+        if(!empty($return->user)){
+            return $return->user;
+        }else{
+            $return;
+        }
     }
 
-    // Retorna os dados do cliente de acordo com o Email
+    // Retorna os dados do cliente de acordo com o Id
+    public function getByDocument($document){
+        $return = $this->http->get('/clients/users?filter=document&value='.$document.'&page=0','');
+        if(!empty($return->items[0])){
+            return $return->items[0];
+        }else{
+            $return;
+        }
+    }
+
+    // Retorna os dados do cliente de acordo com o Id
     public function getByEmail($email){
-        $option = 'limit=1&email=' . $email;
-        return $this->http->get('/customers', $option);
-    }
 
-    // Insere um novo cliente
-    public function create(array $dadosCliente){
-        $dadosCliente = $this->setCliente($dadosCliente);
-        if(!empty($dadosCliente['error'])){
-            return $dadosCliente;
-        }else {
-            return $this->http->post('/customers', $dadosCliente);
-        }
-    }
-
-    // Atualiza os dados do cliente
-    public function update($id, array $dadosCliente){
-        $dadosCliente = $this->setCliente($dadosCliente);
-        if(!empty($dadosCliente['error'])){
-            return $dadosCliente;
-        }else {
-            return $this->http->post('/customers/' . $id, $dadosCliente);
-        }
-    }
-
-    // Deleta uma cliente
-    public function delete($id){
-        return $this->http->get('/customers/'.$id,'','DELETE');
-    }
-
-    // Atualiza os dados do cliente
-    public function restore($id){
-        if(empty($id)){
-            return false;
-        }else {
-            return $this->http->post('/customers/' . $id.'/restore', array());
+        $return = $this->http->get('/clients/users?filter=email&value='.$email.'&page=0','');
+        if(!empty($return->user)){
+            return $return->user;
+        }else{
+            $return;
         }
     }
 
 
-
-    public function get($client_id) {
-        return $this->http->get('/customers/' . $client_id);
-    }
-
-    /**
-     * Cria um novo cliente no Asaas.
-     * @param Array $cliente
-     * @return Boolean
-     */
-    public function create2($cliente)
-    {
-        // Preenche as informações do cliente
-        $cliente = $this->setCliente($cliente);
-        
-        // Faz o post e retorna array de resposta
-        return $this->http->post('/customers', ['form_params' => $cliente]);
-        
-    }
-    
-    /**
-     * Faz merge nas informações do cliente.
-     * 
-     * @see https://asaasv3.docs.apiary.io/#reference/0/clientes/criar-novo-cliente
-     * @param Array $cliente
-     * @return Array
-     */
-    public function setCliente($cliente)
-    {
-        try {
-            if ( ! $this->cliente_valid($cliente) ) {
-                return ClienteException::invalidClient();
-            }
-
-            $this->cliente = array(
-                'name'                 => '',
-                'cpfCnpj'              => '',
-                'email'                => '',
-                'phone'                => '',
-                'mobilePhone'          => '',
-                'address'              => '',
-                'addressNumber'        => '',
-                'complement'           => '',
-                'province'             => '',
-                'postalCode'           => '',
-                'externalReference'    => '',
-                'notificationDisabled' => '',
-                'additionalEmails'     => ''
-            );
-            
-            $this->cliente = array_merge($this->cliente, $cliente);
-            return $this->cliente;
-            
-        } catch (Exception $e) {
-            return 'Erro ao definir o cliente. - ' . $e->getMessage();
-        }
-    }
-    
-    /**
-     * Verifica se os dados do cliente são válidos.
-     * 
-     * @param array $cliente
-     * @return Boolean
-     */
-    public function cliente_valid($cliente)
-    {
-        return ! ( (empty($cliente['name']) OR empty($cliente['cpfCnpj']) OR empty($cliente['email'])) ? 1 : '' );
-    }
 }
